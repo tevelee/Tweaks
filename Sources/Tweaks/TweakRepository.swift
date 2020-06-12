@@ -87,6 +87,18 @@ extension TweakRepository {
             }
         }
     }
+    func hasOverride() -> Bool {
+        categories.contains {
+            self.hasOverride(in: $0)
+        }
+    }
+    func hasOverride(in category: SectionModel<SectionModel<TweakDefinitionBase>>) -> Bool {
+        category.elements.contains {
+            $0.elements.contains {
+                $0.tweakable(tweakRepository: self)?.isOverride() ?? false
+            }
+        }
+    }
     func reset(tweak: TweakDefinitionBase) {
         tweakable(for: tweak)?.reset()
     }

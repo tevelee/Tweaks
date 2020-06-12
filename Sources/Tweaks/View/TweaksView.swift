@@ -51,7 +51,7 @@ struct TweakCategoriesList: View {
                 self.tweakRepository.resetAll()
             }) {
                 Text("Reset all overrides")
-            })
+            }.disabled(!self.tweakRepository.hasOverride()))
             .resignKeyboardOnDragGesture()
         }
     }
@@ -90,7 +90,7 @@ struct TweakCategoryDetail: View {
                 self.tweakRepository.resetAll(in: self.category)
             }) {
                 Text("Reset all overrides")
-            })
+            }.disabled(!self.tweakRepository.hasOverride(in: self.category)))
             .resignKeyboardOnDragGesture()
         }
     }

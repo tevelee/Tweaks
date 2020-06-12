@@ -45,7 +45,7 @@ struct TweakDetailView: View {
         .navigationBarTitle(tweakDefinition.name)
         .navigationBarItems(trailing: Button(action: { self.viewHelper?.reset() }) {
             Text("Reset override")
-        })
+        }.disabled(!isOverride))
     }
 }
 
