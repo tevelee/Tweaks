@@ -159,24 +159,41 @@ public extension TweakDefinition where Renderer == StringTextfieldRenderer {
     }
 }
 
-//public extension ConfigDefinition {
-//    func tweak<Wrapped: Tweakable, Renderer: ViewRenderer>(category: String, section: String, name: String, configRepository: ConfigRepository? = .shared, renderer: Renderer, defaultValueForNew: Wrapped) -> ConfigDefinition where Value == Wrapped?, Renderer.Value == Wrapped {
-//        tweak(category: category, section: section, name: name, configRepository: configRepository, renderer: OptionalToggleRenderer(renderer: renderer, defaultValueForNew: defaultValueForNew))
-//    }
-//
-//    func tweak<Element: Tweakable, Renderer: ViewRenderer>(category: String, section: String, name: String, configRepository: ConfigRepository? = .shared, renderer: Renderer, defaultValueForNewElement: Element) -> ConfigDefinition where Value == [Element], Renderer.Value == Element {
-//        tweak(category: category, section: section, name: name, configRepository: configRepository, renderer: ArrayRenderer(renderer: renderer, defaultValueForNewElement: defaultValueForNewElement))
-//    }
-//}
-//
-//public extension ConfigDefinition where Value == [Int] {
-//    func tweak(category: String, section: String, name: String, configRepository: ConfigRepository? = .shared, defaultValueForNewElement: Int = 0) -> ConfigDefinition {
-//        tweak(category: category, section: section, name: name, configRepository: configRepository, renderer: ArrayRenderer(renderer: InputAndStepperRenderer(), defaultValueForNewElement: defaultValueForNewElement))
-//    }
-//}
-//
-//public extension ConfigDefinition where Value: Tweakable & CaseIterable & RawRepresentable, Value.RawValue: CustomStringConvertible & Hashable {
-//    func tweak(category: String, section: String, name: String, configRepository: ConfigRepository? = .shared) -> ConfigDefinition {
-//        tweak(category: category, section: section, name: name, configRepository: configRepository, renderer: OptionPickerRenderer())
-//    }
-//}
+public extension TweakDefinition {
+    init<Wrapped: Tweakable, InnerRenderer: ViewRenderer>(id: String = UUID().uuidString,
+         name: String,
+         initialValue: Value,
+         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer,
+         renderer: InnerRenderer,
+         defaultValueForNewValue: Wrapped) where Renderer == OptionalToggleRenderer<InnerRenderer, Wrapped> {
+        self.init(id: id, name: name, initialValue: initialValue, valueRenderer: OptionalToggleRenderer(renderer: renderer, defaultValueForNewValue: defaultValueForNewValue), valueTransformer: valueTransformer)
+    }
+    
+    init<Wrapped: Tweakable, InnerRenderer: ViewRenderer>(id: String = UUID().uuidString,
+         name: String,
+         initialValue: Value,
+         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer,
+         renderer: InnerRenderer,
+         defaultValueForNewElement: Wrapped) where Renderer == ArrayRenderer<Wrapped, InnerRenderer> {
+        self.init(id: id, name: name, initialValue: initialValue, valueRenderer: ArrayRenderer(renderer: renderer, defaultValueForNewElement: defaultValueForNewElement), valueTransformer: valueTransformer)
+    }
+}
+
+public extension TweakDefinition where Renderer == ArrayRenderer<Int, InputAndStepperRenderer> {
+    init(id: String = UUID().uuidString,
+         name: String,
+         initialValue: Value,
+         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer,
+         defaultValueForNewElement: Int = 0) {
+        self.init(id: id, name: name, initialValue: initialValue, valueRenderer: ArrayRenderer(renderer: InputAndStepperRenderer(), defaultValueForNewElement: defaultValueForNewElement), valueTransformer: valueTransformer)
+    }
+}
+
+public extension TweakDefinition where Renderer == OptionPickerRenderer<Value>, Value: Tweakable & CaseIterable & RawRepresentable, Value.RawValue: CustomStringConvertible & Hashable {
+    init(id: String = UUID().uuidString,
+         name: String,
+         initialValue: Value,
+         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer) {
+        self.init(id: id, name: name, initialValue: initialValue, valueRenderer: OptionPickerRenderer(), valueTransformer: valueTransformer)
+    }
+}

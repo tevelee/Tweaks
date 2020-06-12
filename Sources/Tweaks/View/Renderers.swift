@@ -230,11 +230,11 @@ public struct ArrayRenderer<Element: Tweakable, Renderer: ViewRenderer>: ViewRen
 
 public struct OptionalToggleRenderer<Renderer: ViewRenderer, Wrapped: Tweakable>: ViewRenderer where Renderer.Value == Wrapped {
     public let renderer: Renderer
-    public let defaultValueForNew: Wrapped
+    public let defaultValueForNewValue: Wrapped
     
-    public init(renderer: Renderer, defaultValueForNew: Wrapped) {
+    public init(renderer: Renderer, defaultValueForNewValue: Wrapped) {
         self.renderer = renderer
-        self.defaultValueForNew = defaultValueForNew
+        self.defaultValueForNewValue = defaultValueForNewValue
     }
     
     public func previewView(value: Wrapped?) -> some View {
@@ -247,7 +247,7 @@ public struct OptionalToggleRenderer<Renderer: ViewRenderer, Wrapped: Tweakable>
         }
     }
     public func tweakView(value: Binding<Wrapped?>) -> some View {
-        OptionalTweakView(value: value, renderer: renderer, defaultValueForNew: defaultValueForNew)
+        OptionalTweakView(value: value, renderer: renderer, defaultValueForNewValue: defaultValueForNewValue)
     }
 }
 
@@ -255,7 +255,7 @@ struct OptionalTweakView<Wrapped: Tweakable, Renderer: ViewRenderer>: View where
     typealias Value = Wrapped?
     let value: Binding<Value>
     let renderer: Renderer
-    let defaultValueForNew: Wrapped
+    let defaultValueForNewValue: Wrapped
 
     @State var lastSetValue: Wrapped?
     
@@ -265,7 +265,7 @@ struct OptionalTweakView<Wrapped: Tweakable, Renderer: ViewRenderer>: View where
                 self.value.wrappedValue != nil
             }, set: {
                 if $0 {
-                    self.value.wrappedValue = self.lastSetValue ?? self.defaultValueForNew
+                    self.value.wrappedValue = self.lastSetValue ?? self.defaultValueForNewValue
                 } else {
                     self.value.wrappedValue = nil
                 }

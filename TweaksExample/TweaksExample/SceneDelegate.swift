@@ -23,7 +23,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let name = TweakDefinition(name: "Name", initialValue: "default name")
         let enabled = TweakDefinition(name: "Is Enabled", initialValue: false, valueRenderer: SegmentedBoolRenderer())
         let numberOfItems = TweakDefinition(name: "Number of items", initialValue: 1)
-        let chartOffset = TweakDefinition(name: "Chart offset", initialValue: nil, valueRenderer: OptionalToggleRenderer(renderer: SliderRenderer(range: 0 ... 10), defaultValueForNew: 1))
+        let chartOffset = TweakDefinition(name: "Chart offset", initialValue: nil, valueRenderer: OptionalToggleRenderer(renderer: SliderRenderer(range: 0 ... 10), defaultValueForNewValue: 1))
         let chartValues = TweakDefinition(name: "Chart values", initialValue: [1,2,3], valueRenderer: ArrayRenderer(renderer: InputAndStepperRenderer(), defaultValueForNewElement: 0))
         let resetAction = TweakAction(category: "Product Settings", section: "Actions", name: "Reset onboarding") {
             print("reset")
