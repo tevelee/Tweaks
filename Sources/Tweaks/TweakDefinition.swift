@@ -1,70 +1,47 @@
 import Foundation
 import SwiftUI
 
-public protocol TweakDefinitionBase {
-    var id: String { get }
+public protocol Tweak {
+    var id: UUID { get }
     var name: String { get }
-    var actionable: ActionableControl? { get }
-    func tweakable(tweakRepository: TweakRepository) -> TweakableControl?
+    func view(searchQuery: String) -> AnyView
 }
 
-public struct ActionableControl {
-    var category: String
-    var section: String
-    var action: () -> Void
-}
-
-public protocol TweakableControl {
-    func previewView() -> AnyView
-    func previewViewForInitialValue() -> AnyView
-    func tweakView() -> AnyView
-    func typeDisplayName() -> String
-    func isOverride() -> Bool
-    func reset()
-}
-
-public struct TweakAction: TweakDefinitionBase {
-    public let id: String
+public struct TweakAction: Tweak, Equatable {
+    public let id: UUID
     public let name: String
-    public let actionable: ActionableControl?
+    public var action: () -> Void
     
-    public init(id: String = UUID().uuidString,
-                category: String,
-                section: String,
+    public init(id: UUID = UUID(),
                 name: String,
                 action: @escaping () -> Void) {
         self.id = id
         self.name = name
-        self.actionable = ActionableControl(category: category, section: section, action: action)
+        self.action = action
     }
     
-    public func tweakable(tweakRepository: TweakRepository) -> TweakableControl? {
-        nil
+    public func view(searchQuery: String) -> AnyView {
+        AnyView(TweakActionRow(tweak: self, searchQuery: searchQuery))
+    }
+    
+    public static func == (lhs: TweakAction, rhs: TweakAction) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
-public protocol TweakDefinitionGenericBase: Identifiable {
-    associatedtype Value: Tweakable
-    associatedtype Renderer: ViewRenderer where Renderer.Value == Value
-    var initialValue: Value { get }
-    var valueRenderer: Renderer { get }
-    var valueTransformer: ValueTransformer<Value, String> { get }
-}
-
-public struct TweakDefinition<Value: Tweakable, Renderer: ViewRenderer>: TweakDefinitionBase, TweakDefinitionGenericBase where Renderer.Value == Value {
-    public let id: String
+public struct TweakDefinition<Renderer: ViewRenderer>: Tweak, Identifiable, Equatable where Renderer.Value: Tweakable {
+    public let id: UUID
     public let name: String
-    public var actionable: ActionableControl? { nil }
     
-    public let initialValue: Value
+    public let initialValue: Renderer.Value
     public let valueRenderer: Renderer
-    public let valueTransformer: ValueTransformer<Value, String>
+    public let valueTransformer: ValueTransformer<Renderer.Value, String>
     
-    public init(id: String = UUID().uuidString,
+    public init(id: UUID = UUID(),
                 name: String,
-                initialValue: Value,
+                initialValue: Renderer.Value,
                 valueRenderer: Renderer,
-                valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer) {
+                valueTransformer: ValueTransformer<Renderer.Value, String> = Renderer.Value.valueTransformer) {
         self.id = id
         self.name = name
         self.initialValue = initialValue
@@ -72,8 +49,16 @@ public struct TweakDefinition<Value: Tweakable, Renderer: ViewRenderer>: TweakDe
         self.valueTransformer = valueTransformer
     }
     
-    public func tweakable(tweakRepository: TweakRepository) -> TweakableControl? {
-        TweakUIHelper(tweakRepository: tweakRepository, tweakDefinition: self)
+    public func viewModel(tweakRepository: TweakRepository) -> TweakViewModel<Renderer> {
+        TweakViewModel(tweakRepository: tweakRepository, tweakDefinition: self)
+    }
+    
+    public func view(searchQuery: String) -> AnyView {
+        AnyView(TweakRow(tweak: self, searchQuery: searchQuery))
+    }
+    
+    public static func == (lhs: TweakDefinition<Renderer>, rhs: TweakDefinition<Renderer>) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
@@ -81,98 +66,98 @@ extension TweakDefinition {
     var persistencyKey: String { "tweaks.\(id)" }
 }
 
-struct TweakUIHelper<Value: Tweakable, Renderer: ViewRenderer>: TweakableControl where Renderer.Value == Value {
+public struct TweakViewModel<Renderer: ViewRenderer> where Renderer.Value: Tweakable {
     let tweakRepository: TweakRepository
-    let tweakDefinition: TweakDefinition<Value, Renderer>
-    
+    let tweakDefinition: TweakDefinition<Renderer>
+
     private func value() -> Renderer.Value {
         tweakRepository[tweakDefinition] ?? tweakDefinition.initialValue
     }
-    
-    public func previewView() -> AnyView {
+
+    public func previewView() -> Renderer.PreviewView {
         previewView(value: value())
     }
-    
-    public func previewViewForInitialValue() -> AnyView {
+
+    public func previewViewForInitialValue() -> Renderer.PreviewView {
         previewView(value: tweakDefinition.initialValue)
     }
-    
-    func previewView(value: Renderer.Value) -> AnyView {
-        AnyView(tweakDefinition.valueRenderer.previewView(value: value))
+
+    private func previewView(value: Renderer.Value) -> Renderer.PreviewView {
+        tweakDefinition.valueRenderer.previewView(value: value)
     }
-    
-    public func tweakView() -> AnyView {
-        AnyView(tweakDefinition.valueRenderer.tweakView(value: Binding(get: {
+
+    public func tweakView() -> Renderer.TweakView {
+        tweakDefinition.valueRenderer.tweakView(value: Binding(get: {
             self.value()
         }, set: { value in
             self.tweakRepository[self.tweakDefinition] = value
-        })))
+        }))
     }
-    
+
     public func typeDisplayName() -> String {
         String(describing: type(of: value()))
     }
-    
+
     public func isOverride() -> Bool {
         tweakRepository[tweakDefinition] != nil
     }
-    
+
     public func reset() {
         tweakRepository[tweakDefinition] = nil
     }
 }
 
 public extension TweakDefinition where Renderer == ToggleBoolRenderer {
-    init(id: String = UUID().uuidString,
+    init(id: UUID = UUID(),
          name: String,
-         initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer) {
+         initialValue: Bool,
+         valueTransformer: ValueTransformer<Bool, String> = Bool.valueTransformer) {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: ToggleBoolRenderer(), valueTransformer: valueTransformer)
     }
 }
 
 public extension TweakDefinition where Renderer == InputAndStepperRenderer {
-    init(id: String = UUID().uuidString,
+    init(id: UUID = UUID(),
          name: String,
-         initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer) {
+         initialValue: Int,
+         valueTransformer: ValueTransformer<Int, String> = Int.valueTransformer) {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: InputAndStepperRenderer(), valueTransformer: valueTransformer)
     }
 }
 
-public extension TweakDefinition where Renderer == SliderRenderer<Value>, Value == Double {
-    init(id: String = UUID().uuidString,
+public extension TweakDefinition where Renderer == SliderRenderer<Double> {
+    init(id: UUID = UUID(),
          name: String,
-         initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer,
+         initialValue: Double,
+         valueTransformer: ValueTransformer<Double, String> = Double.valueTransformer,
          range: ClosedRange<Double> = 0 ... 1) {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: SliderRenderer(range: range), valueTransformer: valueTransformer)
     }
 }
 
 public extension TweakDefinition where Renderer == StringTextfieldRenderer {
-    init(id: String = UUID().uuidString,
+    init(id: UUID = UUID(),
          name: String,
-         initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer) {
+         initialValue: String,
+         valueTransformer: ValueTransformer<String, String> = String.valueTransformer) {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: StringTextfieldRenderer(), valueTransformer: valueTransformer)
     }
 }
 
 public extension TweakDefinition {
-    init<Wrapped: Tweakable, InnerRenderer: ViewRenderer>(id: String = UUID().uuidString,
+    init<Wrapped: Tweakable, InnerRenderer: ViewRenderer>(id: UUID = UUID(),
          name: String,
-         initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer,
+         initialValue: Wrapped?,
+         valueTransformer: ValueTransformer<Wrapped?, String> = Wrapped?.valueTransformer,
          renderer: InnerRenderer,
          defaultValueForNewValue: Wrapped) where Renderer == OptionalToggleRenderer<InnerRenderer, Wrapped> {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: OptionalToggleRenderer(renderer: renderer, defaultValueForNewValue: defaultValueForNewValue), valueTransformer: valueTransformer)
     }
     
-    init<Wrapped: Tweakable, InnerRenderer: ViewRenderer>(id: String = UUID().uuidString,
+    init<Wrapped: Tweakable, InnerRenderer: ViewRenderer>(id: UUID = UUID(),
          name: String,
-         initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer,
+         initialValue: [Wrapped],
+         valueTransformer: ValueTransformer<[Wrapped], String> = [Wrapped].valueTransformer,
          renderer: InnerRenderer,
          defaultValueForNewElement: Wrapped) where Renderer == ArrayRenderer<Wrapped, InnerRenderer> {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: ArrayRenderer(renderer: renderer, defaultValueForNewElement: defaultValueForNewElement), valueTransformer: valueTransformer)
@@ -180,20 +165,30 @@ public extension TweakDefinition {
 }
 
 public extension TweakDefinition where Renderer == ArrayRenderer<Int, InputAndStepperRenderer> {
-    init(id: String = UUID().uuidString,
+    init(id: UUID = UUID(),
          name: String,
-         initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer,
+         initialValue: [Int],
+         valueTransformer: ValueTransformer<[Int], String> = [Int].valueTransformer,
          defaultValueForNewElement: Int = 0) {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: ArrayRenderer(renderer: InputAndStepperRenderer(), defaultValueForNewElement: defaultValueForNewElement), valueTransformer: valueTransformer)
     }
 }
 
-public extension TweakDefinition where Renderer == OptionPickerRenderer<Value>, Value: Tweakable & CaseIterable & RawRepresentable, Value.RawValue: CustomStringConvertible & Hashable {
-    init(id: String = UUID().uuidString,
+public extension TweakDefinition {
+    init<Value>(id: UUID = UUID(),
          name: String,
          initialValue: Value,
-         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer) {
+         valueTransformer: ValueTransformer<Value, String> = Value.valueTransformer) where Renderer == OptionPickerRenderer<Value>, Renderer.Value: CaseIterable & RawRepresentable, Value.RawValue: CustomStringConvertible & Hashable {
         self.init(id: id, name: name, initialValue: initialValue, valueRenderer: OptionPickerRenderer(), valueTransformer: valueTransformer)
+    }
+}
+
+@available(iOS 14.0, *)
+public extension TweakDefinition where Renderer == ColorPickerRenderer {
+    init(id: UUID = UUID(),
+         name: String,
+         initialValue: Color,
+         valueTransformer: ValueTransformer<Color, String> = Color.valueTransformer) {
+        self.init(id: id, name: name, initialValue: initialValue, valueRenderer: ColorPickerRenderer(), valueTransformer: valueTransformer)
     }
 }

@@ -300,3 +300,16 @@ public struct CustomRenderer<Value, PreviewView: View, TweakView: View>: ViewRen
         tweakViewFactory(value)
     }
 }
+
+@available(iOS 14.0, *)
+public struct ColorPickerRenderer: ViewRenderer {
+    public typealias Value = Color
+    public init() {}
+    public func previewView(value: Value) -> some View {
+        value.frame(width: 30, height: 30).cornerRadius(8)
+    }
+    
+    public func tweakView(value: Binding<Value>) -> some View {
+        ColorPicker("Pick a color", selection: value)
+    }
+}

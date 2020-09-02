@@ -32,14 +32,16 @@ struct TweakCategoriesList: View {
         VStack {
             SearchBar(text: $searchText, placeholderText: "Search tweaks")
             List {
-                ForEach(tweakRepository.categories.search(for: searchText, in: \.name), id: \.element.name) { category, highlight in
+                let searchResults = tweakRepository.categories.search(for: searchText, in: \.name)
+                ForEach(searchResults, id: \.name) { category in
                     NavigationLink(destination: TweakCategoryDetail(category: category)) {
-                        if highlight.isEmpty {
+                        let highlightRanges = category.name.ranges(for: searchText)
+                        if highlightRanges.isEmpty {
                             Text(category.name)
                         } else {
                             StyledText(category.name)
                                 .foregroundColor(Color(.secondaryLabel))
-                                .style(ranges: highlight) {
+                                .style(ranges: highlightRanges) {
                                     $0.fontWeight(.semibold).foregroundColor(Color(.label))
                                 }
                         }
@@ -58,7 +60,7 @@ struct TweakCategoriesList: View {
 }
 
 struct TweakCategoryDetail: View {
-    let category: SectionModel<SectionModel<TweakDefinitionBase>>
+    let category: SectionModel<SectionModel<Tweak>>
     @EnvironmentObject var tweakRepository: TweakRepository
     @Environment(\.highlightColor) var highlightColor
     @State var searchText: String = ""
@@ -67,49 +69,50 @@ struct TweakCategoryDetail: View {
             SearchBar(text: $searchText, placeholderText: "Search tweaks")
             List {
                 ForEach(category.elements, id: \.name) { section in
-                    Group {
-                        if !section.elements.search(for: self.searchText, in: \.name).isEmpty {
-                            Section(header: Text(section.name)) {
-                                ForEach(section.elements.search(for: self.searchText, in: \.name), id: \.element.id) { tweak, highlight in
-                                    Group {
-                                        if tweak.actionable != nil {
-                                            TweakActionRow(tweak: tweak, highlight: highlight)
-                                        } else {
-                                            TweakRow(tweak: tweak, highlight: highlight)
-                                        }
-                                    }
-                                }
+                    let searchResults = section.elements.search(for: searchText, in: \.name)
+                    if !searchResults.isEmpty {
+                        Section(header: Text(section.name)) {
+                            ForEach(searchResults, id: \.id) { tweak in
+                                tweak.view(searchQuery: searchText)
                             }
                         }
                     }
                 }
             }
             .listStyle(GroupedListStyle())
-            .navigationBarTitle(category.name)
-            .navigationBarItems(trailing: Button(action: {
-                self.tweakRepository.resetAll(in: self.category)
-            }) {
-                Text("Reset all overrides")
-            }.disabled(!self.tweakRepository.hasOverride(in: self.category)))
             .resignKeyboardOnDragGesture()
         }
+        .navigationBarTitle(category.name)
+        .navigationBarItems(trailing: Button(action: {
+            self.tweakRepository.resetAll(in: self.category)
+        }) {
+            Text("Reset all overrides")
+        }.disabled(!self.tweakRepository.hasOverride(in: self.category)))
     }
 }
 
-struct TweakActionRow: View {
-    let tweak: TweakDefinitionBase
-    let highlight: [Range<String.Index>]
+struct HasResult: PreferenceKey {
+    static var defaultValue: Bool = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = nextValue()
+    }
+}
+
+struct TweakActionRow: View, Equatable {
+    let tweak: TweakAction
+    let searchQuery: String
 
     var body: some View {
-        Button(action: tweak.actionable?.action ?? {}) {
+        Button(action: tweak.action) {
             HStack {
-                if highlight.isEmpty {
+                let highlightRanges = tweak.name.ranges(for: searchQuery)
+                if highlightRanges.isEmpty {
                     Text(tweak.name)
                         .foregroundColor(Color(.label))
                 } else {
                     StyledText(tweak.name)
                         .foregroundColor(Color(.secondaryLabel))
-                        .style(ranges: highlight) {
+                        .style(ranges: highlightRanges) {
                             $0.fontWeight(.semibold).foregroundColor(Color(.label))
                         }
                 }
@@ -120,37 +123,41 @@ struct TweakActionRow: View {
     }
 }
 
-struct TweakRow: View {
+struct TweakRow<Renderer: ViewRenderer>: View, Equatable where Renderer.Value: Tweakable {
     @EnvironmentObject var tweakRepository: TweakRepository
     @Environment(\.highlightColor) var highlightColor
 
-    let tweak: TweakDefinitionBase
-    let highlight: [Range<String.Index>]
+    let tweak: TweakDefinition<Renderer>
+    let searchQuery: String
     
-    var viewHelper: TweakableControl? {
-        tweakRepository.tweakable(for: tweak)
+    var viewModel: TweakViewModel<Renderer> {
+        tweak.viewModel(tweakRepository: tweakRepository)
     }
-    var isOverride: Bool { viewHelper?.isOverride() ?? false }
 
     var body: some View {
         NavigationLink(destination: TweakDetailView(tweakDefinition: tweak)) {
             HStack {
-                if highlight.isEmpty {
+                let highlightRanges = tweak.name.ranges(for: searchQuery)
+                if highlightRanges.isEmpty {
                     Text(tweak.name)
-                        .foregroundColor(self.isOverride ? self.highlightColor : Color(.label))
+                        .foregroundColor(viewModel.isOverride() ? self.highlightColor : Color(.label))
                 } else {
                     StyledText(tweak.name)
-                        .foregroundColor(self.isOverride ? self.highlightColor.opacity(0.7) : Color(.secondaryLabel))
-                        .style(ranges: highlight) {
-                            $0.fontWeight(.semibold).foregroundColor(self.isOverride ? self.highlightColor : Color(.label))
+                        .foregroundColor(viewModel.isOverride() ? self.highlightColor.opacity(0.7) : Color(.secondaryLabel))
+                        .style(ranges: highlightRanges) {
+                            $0.fontWeight(.semibold).foregroundColor(viewModel.isOverride() ? self.highlightColor : Color(.label))
                         }
                 }
                 Spacer()
-                self.viewHelper?.previewView()
+                viewModel.previewView()
                     .font(.subheadline)
-                    .foregroundColor(self.isOverride ? self.highlightColor : Color(.secondaryLabel))
+                    .foregroundColor(viewModel.isOverride() ? self.highlightColor : Color(.secondaryLabel))
             }
         }
+    }
+    
+    static func == (lhs: TweakRow<Renderer>, rhs: TweakRow<Renderer>) -> Bool {
+        lhs.tweak == rhs.tweak && lhs.searchQuery == rhs.searchQuery
     }
 }
 
@@ -161,20 +168,29 @@ struct TweaksView_Previews: PreviewProvider {
 }
 
 extension Array {
-    func search(for query: String, in transform: (Element) -> String, byWords: Bool = true) -> [(element: Element, highlight: [Range<String.Index>])] {
-        guard !query.isEmpty else { return map { ($0, []) } }
-        return compactMap { element in
-            let source = transform(element)
-            let queries = byWords ? query.split(separator: " ").map(String.init) : [query]
-            let ranges = queries.compactMap { query -> Range<String.Index>? in
-                if let range = source.range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: nil, locale: nil) {
-                    return range
-                } else {
-                    return nil
-                }
+    func search(for query: String, in field: (Element) -> String, byWords: Bool = true) -> Array {
+        guard !query.isEmpty else { return self }
+        return filter { field($0).matches(query: query, byWords: true) }
+    }
+}
+
+extension String {
+    func matches(query: String, byWords: Bool = true) -> Bool {
+        !ranges(for: query, byWords: byWords).isEmpty
+    }
+    
+    func ranges(for query: String, byWords: Bool = true) -> [Range<String.Index>] {
+        guard !query.isEmpty else { return [] }
+        let queries = byWords ? query.split(separator: " ").map(String.init) : [query]
+        let ranges = queries.compactMap { query -> Range<String.Index>? in
+            if let range = range(of: query, options: [.caseInsensitive, .diacriticInsensitive], range: nil, locale: nil) {
+                return range
+            } else {
+                return nil
             }
-            return ranges.count == queries.count ? (element, ranges) : nil
         }
+        guard ranges.count == queries.count else { return [] }
+        return ranges
     }
 }
 

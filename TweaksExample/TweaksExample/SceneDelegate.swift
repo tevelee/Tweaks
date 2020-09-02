@@ -25,10 +25,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let numberOfItems = TweakDefinition(name: "Number of items", initialValue: 1)
         let chartOffset = TweakDefinition(name: "Chart offset", initialValue: nil, valueRenderer: OptionalToggleRenderer(renderer: SliderRenderer(range: 0 ... 10), defaultValueForNewValue: 1))
         let chartValues = TweakDefinition(name: "Chart values", initialValue: [1,2,3], valueRenderer: ArrayRenderer(renderer: InputAndStepperRenderer(), defaultValueForNewElement: 0))
-        let resetAction = TweakAction(category: "Product Settings", section: "Actions", name: "Reset onboarding") {
+        let resetAction = TweakAction(name: "Reset onboarding") {
             print("reset")
         }
-        let restartAction = TweakAction(category: "Product Settings", section: "Actions", name: "Restart app") {
+        let restartAction = TweakAction(name: "Restart app") {
             print("restart")
         }
         
@@ -38,8 +38,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         tweakRepo.add(tweak: chartValues, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: name, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: enabled, category: "Product Settings", section: "Feature Settings")
-        tweakRepo.add(resetAction)
-        tweakRepo.add(restartAction)
+        tweakRepo.add(tweak: resetAction, category: "Product Settings", section: "Actions")
+        tweakRepo.add(tweak: restartAction, category: "Product Settings", section: "Actions")
+        if #available(iOS 14.0, *) {
+            let color = TweakDefinition(name: "Background Color", initialValue: Color.purple)
+            tweakRepo.add(tweak: color, category: "Product Settings", section: "Feature Settings")
+        }
         
         // Create the SwiftUI view that provides the window contents.
         let contentView = ContentView()

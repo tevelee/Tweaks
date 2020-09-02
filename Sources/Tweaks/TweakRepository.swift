@@ -2,55 +2,68 @@ import Foundation
 import SwiftUI
 
 public protocol TweakRepositoryProtocol {
-    func add(tweak: TweakDefinitionBase, category: String, section: String)
-    func add(_ action: TweakAction)
-    subscript<Value: Tweakable, Renderer: ViewRenderer>(_ definition: TweakDefinition<Value, Renderer>) -> Value? where Renderer.Value == Value { get set }
+    func add(_ hierarchy: TweakHierarchy)
+    subscript<Renderer: ViewRenderer>(_ definition: TweakDefinition<Renderer>) -> Renderer.Value? { get set }
 }
 
-public class TweakRepository: ObservableObject {
+public extension TweakRepositoryProtocol {
+    func add(tweak: Tweak, category: String, section: String) {
+        add(TweakHierarchy(tweak: tweak, category: category, section: section))
+    }
+}
+
+public struct TweakHierarchy {
+    public let tweak: Tweak
+    public let category: String
+    public let section: String
+    
+    public init(tweak: Tweak,
+                category: String,
+                section: String) {
+        self.tweak = tweak
+        self.category = category
+        self.section = section
+    }
+}
+
+public class TweakRepository: ObservableObject, TweakRepositoryProtocol {
     public static let shared = TweakRepository()
     
     let userDefaults: UserDefaults
-    var tweaks: [String: TweakDefinitionBase] = [:]
-    var categories: [SectionModel<SectionModel<TweakDefinitionBase>>] = []
+    var tweaks: [UUID: Tweak] = [:]
+    var categories: [SectionModel<SectionModel<Tweak>>] = []
     
     public init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
     }
     
-    public func add(tweak: TweakDefinitionBase, category: String, section: String) {
-        if let existingCategory = categories.firstWithIndex(where: { $0.name == category }) {
-            if let existingSection = existingCategory.element.elements.firstWithIndex(where: { $0.name == section }) {
-                if let existingTweak = existingSection.element.elements.firstWithIndex(where: { $0.id == tweak.id }) {
-                    categories[existingCategory.offset].elements[existingSection.offset].elements[existingTweak.offset] = tweak
+    public func add(_ hierarchy: TweakHierarchy) {
+        if let existingCategory = categories.firstWithIndex(where: { $0.name == hierarchy.category }) {
+            if let existingSection = existingCategory.element.elements.firstWithIndex(where: { $0.name == hierarchy.section }) {
+                if let existingTweak = existingSection.element.elements.firstWithIndex(where: { $0.id == hierarchy.tweak.id }) {
+                    categories[existingCategory.offset].elements[existingSection.offset].elements[existingTweak.offset] = hierarchy.tweak
                 } else {
-                    categories[existingCategory.offset].elements[existingSection.offset].elements.append(tweak)
+                    categories[existingCategory.offset].elements[existingSection.offset].elements.append(hierarchy.tweak)
                 }
             } else {
-                categories[existingCategory.offset].elements.append(SectionModel(name: section, elements: [tweak]))
+                categories[existingCategory.offset].elements.append(SectionModel(name: hierarchy.section, elements: [hierarchy.tweak]))
             }
         } else {
-            categories.append(SectionModel(name: category, elements: [SectionModel(name: section, elements: [tweak])]))
+            categories.append(SectionModel(name: hierarchy.category, elements: [SectionModel(name: hierarchy.section, elements: [hierarchy.tweak])]))
         }
-        tweaks[tweak.id] = tweak
+        tweaks[hierarchy.tweak.id] = hierarchy.tweak
     }
-    
-    public func add(_ action: TweakAction) {
-        if let actionable = action.actionable {
-            add(tweak: action, category: actionable.category, section: actionable.section)
-        }
-    }
-    
-    public subscript<Value: Tweakable, Renderer: ViewRenderer>(_ definition: TweakDefinition<Value, Renderer>) -> Value? where Renderer.Value == Value {
+
+    public subscript<Renderer: ViewRenderer>(_ definition: TweakDefinition<Renderer>) -> Renderer.Value? {
         get {
-            guard tweaks[definition.id] != nil, definition.actionable == nil else { return nil }
+            guard tweaks[definition.id] != nil else { return nil }
             if let string = userDefaults.string(forKey: definition.persistencyKey) {
                 return Renderer.Value(stringRepresentation: string)
             }
             return nil
         }
         set(value) {
-            guard tweaks[definition.id] != nil, definition.actionable == nil else { return }
+            guard tweaks[definition.id] != nil else { return }
             if let value = value, value != definition.initialValue {
                 userDefaults.set(value.stringRepresentation, forKey: definition.persistencyKey)
             } else {
@@ -71,16 +84,12 @@ extension Array {
 }
 
 extension TweakRepository {
-    func tweakable(for definition: TweakDefinitionBase) -> TweakableControl? {
-        guard let tweak = tweaks[definition.id], let tweakable = tweak.tweakable(tweakRepository: self) else { return nil }
-        return tweakable
-    }
     func resetAll() {
         for category in categories {
             resetAll(in: category)
         }
     }
-    func resetAll(in category: SectionModel<SectionModel<TweakDefinitionBase>>) {
+    func resetAll(in category: SectionModel<SectionModel<Tweak>>) {
         for section in category.elements {
             for tweak in section.elements {
                 reset(tweak: tweak)
@@ -92,14 +101,15 @@ extension TweakRepository {
             self.hasOverride(in: $0)
         }
     }
-    func hasOverride(in category: SectionModel<SectionModel<TweakDefinitionBase>>) -> Bool {
-        category.elements.contains {
-            $0.elements.contains {
-                $0.tweakable(tweakRepository: self)?.isOverride() ?? false
-            }
-        }
+    func hasOverride(in category: SectionModel<SectionModel<Tweak>>) -> Bool {
+//        category.elements.contains {
+//            $0.elements.contains {
+//                $0.tweakable(tweakRepository: self)?.isOverride() ?? false
+//            }
+//        }
+        false
     }
-    func reset(tweak: TweakDefinitionBase) {
-        tweakable(for: tweak)?.reset()
+    func reset(tweak: Tweak) {
+//        tweakable(for: tweak)?.reset()
     }
 }

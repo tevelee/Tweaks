@@ -1,51 +1,47 @@
 import SwiftUI
 
-struct TweakDetailView: View {
-    let tweakDefinition: TweakDefinitionBase
+struct TweakDetailView<Renderer: ViewRenderer>: View where Renderer.Value: Tweakable {
+    let tweakDefinition: TweakDefinition<Renderer>
     @EnvironmentObject var tweakRepository: TweakRepository
     @Environment(\.highlightColor) var highlightColor
     
-    var viewHelper: TweakableControl? {
-        tweakRepository.tweakable(for: tweakDefinition)
+    var viewModel: TweakViewModel<Renderer> {
+        tweakDefinition.viewModel(tweakRepository: tweakRepository)
     }
-    
-    var isOverride: Bool { viewHelper?.isOverride() ?? false }
     
     var body: some View {
         Form {
             Section(header: Color.clear.frame(height: 30)) {
                 HStack {
                     Text("Current value")
-                        .font(self.isOverride ? Font.body.bold() : Font.body)
-                        .foregroundColor(isOverride ? highlightColor : Color(.label))
+                        .font(viewModel.isOverride() ? Font.body.bold() : Font.body)
+                        .foregroundColor(viewModel.isOverride() ? highlightColor : Color(.label))
                     Spacer()
-                    self.viewHelper?.previewView()
+                    viewModel.previewView()
                 }
-                if self.isOverride {
+                if viewModel.isOverride() {
                     HStack {
                         Text("Original value")
                         Spacer()
-                        self.viewHelper?.previewViewForInitialValue()
+                        viewModel.previewViewForInitialValue()
                     }
                     .animation(.default)
                     .transition(.opacity)
                 }
-                self.viewHelper.map { control in
-                    HStack {
-                        Text("Type")
-                        Spacer()
-                        Text(control.typeDisplayName())
-                    }
+                HStack {
+                    Text("Type")
+                    Spacer()
+                    Text(viewModel.typeDisplayName())
                 }
             }
             Section(header: Text("Tweak value")) {
-                self.viewHelper?.tweakView()
+                viewModel.tweakView()
             }
         }
         .navigationBarTitle(tweakDefinition.name)
-        .navigationBarItems(trailing: Button(action: { self.viewHelper?.reset() }) {
+        .navigationBarItems(trailing: Button(action: viewModel.reset) {
             Text("Reset override")
-        }.disabled(!isOverride))
+        }.disabled(!viewModel.isOverride()))
     }
 }
 
