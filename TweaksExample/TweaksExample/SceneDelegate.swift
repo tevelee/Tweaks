@@ -20,11 +20,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
 
-        let name = TweakDefinition(name: "Name", initialValue: "default name")
-        let enabled = TweakDefinition(name: "Is Enabled", initialValue: false, valueRenderer: SegmentedBoolRenderer())
-        let numberOfItems = TweakDefinition(name: "Number of items", initialValue: 1)
-        let chartOffset = TweakDefinition(name: "Chart offset", initialValue: nil, valueRenderer: OptionalToggleRenderer(renderer: SliderRenderer(range: 0 ... 10), defaultValueForNewValue: 1))
-        let chartValues = TweakDefinition(name: "Chart values", initialValue: [1,2,3], valueRenderer: ArrayRenderer(renderer: InputAndStepperRenderer(), defaultValueForNewElement: 0))
+        let name = TweakDefinition(id: "t1", name: "Name", initialValue: "default name")
+        let enabled = TweakDefinition(id: "t2", name: "Is Enabled", initialValue: false, valueRenderer: SegmentedBoolRenderer(), store: UserDefaultsStore(converter: .description))
+        let flag = TweakDefinition(name: "Flag", initialValue: true)
+        let numberOfItems = TweakDefinition(id: "t3", name: "Number of items", initialValue: 1)
+        let chartOffset = TweakDefinition(id: "t4", name: "Chart offset", initialValue: nil, valueRenderer: OptionalToggleRenderer(renderer: SliderRenderer(range: 0 ... 10), defaultValueForNewElement: 1), store: InMemoryStore())
+        let chartValues = TweakDefinition(id: "t5", name: "Chart values", initialValue: [1,2,3])
         let resetAction = TweakAction(name: "Reset onboarding") {
             print("reset")
         }
@@ -38,10 +39,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         tweakRepo.add(tweak: chartValues, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: name, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: enabled, category: "Product Settings", section: "Feature Settings")
+        tweakRepo.add(tweak: flag, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: resetAction, category: "Product Settings", section: "Actions")
         tweakRepo.add(tweak: restartAction, category: "Product Settings", section: "Actions")
         if #available(iOS 14.0, *) {
-            let color = TweakDefinition(name: "Background Color", initialValue: Color.purple)
+            let color = TweakDefinition(id: "t8", name: "Background Color", initialValue: Color.purple)
             tweakRepo.add(tweak: color, category: "Product Settings", section: "Feature Settings")
         }
         

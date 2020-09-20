@@ -5,14 +5,8 @@ public protocol ViewRenderer {
     associatedtype Value
     associatedtype PreviewView: View
     associatedtype TweakView: View
-    func previewView(value: Value) -> PreviewView
-    func tweakView(value: Binding<Value>) -> TweakView
-}
-
-extension ViewRenderer where Value: Tweakable {
-    public func previewView(value: Value) -> some View {
-        Text(value.stringRepresentation)
-    }
+    @ViewBuilder func previewView(value: Value) -> PreviewView
+    @ViewBuilder func tweakView(value: Binding<Value>) -> TweakView
 }
 
 public struct ToggleBoolRenderer: ViewRenderer {
@@ -99,29 +93,29 @@ public struct StringTextfieldRenderer: ViewRenderer {
     }
 }
 
-public struct PickerRendererWithCustomValue<Value: Tweakable & Hashable, Renderer: ViewRenderer>: ViewRenderer where Renderer.Value == Value {
-    public let options: [String: Value]
+public struct PickerRendererWithCustomValue<Renderer: ViewRenderer>: ViewRenderer where Renderer.Value: Hashable {
+    public let options: [String: Renderer.Value]
     public let renderer: Renderer
-    public init(options: [String: Value], renderer: Renderer) {
+    public init(options: [String: Renderer.Value], renderer: Renderer) {
         self.options = options
         self.renderer = renderer
     }
-    public init(options: [Value], renderer: Renderer) {
-        self.init(options: Dictionary(grouping: options, by:  \.stringRepresentation).compactMapValues(\.first), renderer: renderer)
+    public init(options: [Renderer.Value], renderer: Renderer, converter: Converting<Renderer.Value, String>) {
+        self.init(options: Dictionary(grouping: options) { converter.convert($0, fallback: "") }.compactMapValues(\.first), renderer: renderer)
     }
-    public func previewView(value: Value) -> some View {
+    public func previewView(value: Renderer.Value) -> some View {
         self.renderer.previewView(value: value)
     }
-    
-    let sort = { (one: (key: String, Value), two: (key: String, Value)) -> Bool in
+
+    let sort = { (one: (key: String, Renderer.Value), two: (key: String, Renderer.Value)) -> Bool in
         switch (one.key, two.key) {
             case ("Custom", _): return false
             case (_, "Custom"): return true
             case let (one, two): return one < two
         }
     }
-    
-    public func tweakView(value: Binding<Value>) -> some View {
+
+    public func tweakView(value: Binding<Renderer.Value>) -> some View {
         var options = self.options
         options["Custom"] = value.wrappedValue
         return VStack {
@@ -131,23 +125,23 @@ public struct PickerRendererWithCustomValue<Value: Tweakable & Hashable, Rendere
     }
 }
 
-public struct PickerRenderer<Value: Tweakable & Hashable, Renderer: ViewRenderer>: ViewRenderer where Renderer.Value == Value {
-    public let options: [String: Value]
+public struct PickerRenderer<Renderer: ViewRenderer>: ViewRenderer where Renderer.Value: Hashable {
+    public let options: [String: Renderer.Value]
     public let renderer: Renderer
-    public typealias Pair = (key: String, value: Value)
+    public typealias Pair = (key: String, value: Renderer.Value)
     public let sort: (Pair, Pair) -> Bool
-    public init(options: [String: Value], renderer: Renderer, sort: @escaping (Pair, Pair) -> Bool = { $0.key < $1.key }) {
+    public init(options: [String: Renderer.Value], renderer: Renderer, sort: @escaping (Pair, Pair) -> Bool = { $0.key < $1.key }) {
         self.options = options
         self.renderer = renderer
         self.sort = sort
     }
-    public init(options: [Value], renderer: Renderer, sort: @escaping (Pair, Pair) -> Bool = { $0.key < $1.key }) {
-        self.init(options: Dictionary(grouping: options, by:  \.stringRepresentation).compactMapValues(\.first), renderer: renderer, sort: sort)
+    public init(options: [Renderer.Value], renderer: Renderer, converter: Converting<Renderer.Value, String>, sort: @escaping (Pair, Pair) -> Bool = { $0.key < $1.key }) {
+        self.init(options: Dictionary(grouping: options) { converter.convert($0, fallback: "") }.compactMapValues(\.first), renderer: renderer, sort: sort)
     }
-    public func previewView(value: Value) -> some View {
+    public func previewView(value: Renderer.Value) -> some View {
         self.renderer.previewView(value: value)
     }
-    public func tweakView(value: Binding<Value>) -> some View {
+    public func tweakView(value: Binding<Renderer.Value>) -> some View {
         VStack {
             Picker(selection: value, label: EmptyView()) {
                 ForEach(options.sorted(by: sort).map(\.key), id: \.self) { key in
@@ -170,21 +164,28 @@ public struct PickerRenderer<Value: Tweakable & Hashable, Renderer: ViewRenderer
     }
 }
 
-public struct OptionPickerRenderer<Value>: ViewRenderer where Value: RawRepresentable & CaseIterable, Value.RawValue: CustomStringConvertible & Hashable {
-    public init() {}
-    public func previewView(value: Value) -> some View {
-        Text(value.rawValue.description)
+public struct OptionPickerRenderer<Value>: ViewRenderer {
+    public let values: [Value]
+    public let converter: Converting<Value, String>
+    public init(values: [Value], converter: Converting<Value, String>) {
+        self.values = values
+        self.converter = converter
     }
-    
+    public func previewView(value: Value) -> some View {
+        Text(converter.convert(value, fallback: ""))
+    }
+
     public func tweakView(value: Binding<Value>) -> some View {
         List {
-            ForEach(Array(Value.allCases), id: \.rawValue.description) { item in
+            let selectedItemString = converter.convert(value.wrappedValue, fallback: "")
+            let values = self.values.map { (value: $0, string: converter.convert($0, fallback: "")) }
+            ForEach(values, id: \.string) { item, itemString in
                 Button(action: { value.wrappedValue = item }) {
                     HStack {
                         self.previewView(value: item)
                             .foregroundColor(Color(.label))
                         Spacer()
-                        if value.wrappedValue == item {
+                        if selectedItemString == itemString {
                             Image(systemName: "checkmark")
                                 .foregroundColor(Color(.systemBlue))
                         }
@@ -195,17 +196,27 @@ public struct OptionPickerRenderer<Value>: ViewRenderer where Value: RawRepresen
     }
 }
 
-public struct ArrayRenderer<Element: Tweakable, Renderer: ViewRenderer>: ViewRenderer where Renderer.Value == Element {
-    let renderer: Renderer
-    let defaultValueForNewElement: Element
-    public init(renderer: Renderer, defaultValueForNewElement: Element) {
+public extension OptionPickerRenderer where Value: CaseIterable {
+    init(converter: Converting<Value, String>) {
+        self.init(values: Array(Value.allCases), converter: converter)
+    }
+}
+
+public struct ArrayRenderer<Renderer: ViewRenderer>: ViewRenderer {
+    public let renderer: Renderer
+    public let converter: Converting<Renderer.Value, String>
+    public let defaultValueForNewElement: Renderer.Value
+    public init(renderer: Renderer,
+                converter: Converting<Renderer.Value, String>,
+                defaultValueForNewElement: Renderer.Value) {
         self.renderer = renderer
+        self.converter = converter
         self.defaultValueForNewElement = defaultValueForNewElement
     }
-    public func previewView(value: [Element]) -> some View {
-        Text(value.map(\.stringRepresentation).joined(separator: ", "))
+    public func previewView(value: [Renderer.Value]) -> some View {
+        Text(value.map { converter.convert($0, fallback: "") }.joined(separator: ", "))
     }
-    public func tweakView(value: Binding<[Element]>) -> some View {
+    public func tweakView(value: Binding<[Renderer.Value]>) -> some View {
         VStack {
             ForEach(0 ..< value.wrappedValue.count, id: \.self) { index in
                 HStack {
@@ -228,36 +239,34 @@ public struct ArrayRenderer<Element: Tweakable, Renderer: ViewRenderer>: ViewRen
     }
 }
 
-public struct OptionalToggleRenderer<Renderer: ViewRenderer, Wrapped: Tweakable>: ViewRenderer where Renderer.Value == Wrapped {
+public struct OptionalToggleRenderer<Renderer: ViewRenderer>: ViewRenderer where Renderer.Value: Tweakable {
     public let renderer: Renderer
-    public let defaultValueForNewValue: Wrapped
+    public let defaultValueForNewElement: Renderer.Value
     
-    public init(renderer: Renderer, defaultValueForNewValue: Wrapped) {
+    public init(renderer: Renderer, defaultValueForNewElement: Renderer.Value) {
         self.renderer = renderer
-        self.defaultValueForNewValue = defaultValueForNewValue
+        self.defaultValueForNewElement = defaultValueForNewElement
     }
     
-    public func previewView(value: Wrapped?) -> some View {
-        Group {
-            if value == nil {
-                Text("no value")
-            } else {
-                renderer.previewView(value: value!)
-            }
+    public func previewView(value: Renderer.Value?) -> some View {
+        if value == nil {
+            Text("no value")
+        } else {
+            renderer.previewView(value: value!)
         }
     }
-    public func tweakView(value: Binding<Wrapped?>) -> some View {
-        OptionalTweakView(value: value, renderer: renderer, defaultValueForNewValue: defaultValueForNewValue)
+    public func tweakView(value: Binding<Renderer.Value?>) -> some View {
+        OptionalTweakView(value: value, renderer: renderer, defaultValueForNewElement: defaultValueForNewElement)
     }
 }
 
-struct OptionalTweakView<Wrapped: Tweakable, Renderer: ViewRenderer>: View where Renderer.Value == Wrapped {
-    typealias Value = Wrapped?
+struct OptionalTweakView<Renderer: ViewRenderer>: View where Renderer.Value: Tweakable {
+    typealias Value = Renderer.Value?
     let value: Binding<Value>
     let renderer: Renderer
-    let defaultValueForNewValue: Wrapped
+    let defaultValueForNewElement: Renderer.Value
 
-    @State var lastSetValue: Wrapped?
+    @State var lastSetValue: Renderer.Value?
     
     var body: some View {
         VStack {
@@ -265,13 +274,13 @@ struct OptionalTweakView<Wrapped: Tweakable, Renderer: ViewRenderer>: View where
                 self.value.wrappedValue != nil
             }, set: {
                 if $0 {
-                    self.value.wrappedValue = self.lastSetValue ?? self.defaultValueForNewValue
+                    self.value.wrappedValue = self.lastSetValue ?? self.defaultValueForNewElement
                 } else {
                     self.value.wrappedValue = nil
                 }
             })) { Text("Has value?") }
             if value.wrappedValue != nil {
-                renderer.tweakView(value: Binding<Wrapped>(get: { self.value.wrappedValue! }, set: {
+                renderer.tweakView(value: Binding<Renderer.Value>(get: { self.value.wrappedValue! }, set: {
                     self.value.wrappedValue = $0
                     self.lastSetValue = $0
                 }))

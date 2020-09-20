@@ -98,7 +98,7 @@ struct HasResult: PreferenceKey {
     }
 }
 
-struct TweakActionRow: View, Equatable {
+struct TweakActionRow: View {
     let tweak: TweakAction
     let searchQuery: String
 
@@ -123,14 +123,14 @@ struct TweakActionRow: View, Equatable {
     }
 }
 
-struct TweakRow<Renderer: ViewRenderer>: View, Equatable where Renderer.Value: Tweakable {
+struct TweakRow<Renderer: ViewRenderer, Store: StorageMechanism>: View where Renderer.Value: Tweakable, Store.Key == String, Store.Value == Renderer.Value {
     @EnvironmentObject var tweakRepository: TweakRepository
     @Environment(\.highlightColor) var highlightColor
 
-    let tweak: TweakDefinition<Renderer>
+    let tweak: TweakDefinition<Renderer, Store>
     let searchQuery: String
     
-    var viewModel: TweakViewModel<Renderer> {
+    var viewModel: TweakViewModel<Renderer, Store> {
         tweak.viewModel(tweakRepository: tweakRepository)
     }
 
@@ -154,10 +154,6 @@ struct TweakRow<Renderer: ViewRenderer>: View, Equatable where Renderer.Value: T
                     .foregroundColor(viewModel.isOverride() ? self.highlightColor : Color(.secondaryLabel))
             }
         }
-    }
-    
-    static func == (lhs: TweakRow<Renderer>, rhs: TweakRow<Renderer>) -> Bool {
-        lhs.tweak == rhs.tweak && lhs.searchQuery == rhs.searchQuery
     }
 }
 

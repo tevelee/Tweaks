@@ -1,11 +1,11 @@
 import SwiftUI
 
-struct TweakDetailView<Renderer: ViewRenderer>: View where Renderer.Value: Tweakable {
-    let tweakDefinition: TweakDefinition<Renderer>
+struct TweakDetailView<Renderer: ViewRenderer, Store: StorageMechanism>: View where Renderer.Value: Tweakable, Store.Key == String, Store.Value == Renderer.Value {
+    let tweakDefinition: TweakDefinition<Renderer, Store>
     @EnvironmentObject var tweakRepository: TweakRepository
     @Environment(\.highlightColor) var highlightColor
     
-    var viewModel: TweakViewModel<Renderer> {
+    var viewModel: TweakViewModel<Renderer, Store> {
         tweakDefinition.viewModel(tweakRepository: tweakRepository)
     }
     
@@ -47,7 +47,7 @@ struct TweakDetailView<Renderer: ViewRenderer>: View where Renderer.Value: Tweak
 
 struct TweakDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        let tweak = TweakDefinition(name: "Test", initialValue: 2, valueRenderer: InputAndStepperRenderer())
+        let tweak = TweakDefinition(id: "preview", name: "Test", initialValue: 2, valueRenderer: InputAndStepperRenderer(), store: InMemoryStore())
         return TweakDetailView(tweakDefinition: tweak)
     }
 }
