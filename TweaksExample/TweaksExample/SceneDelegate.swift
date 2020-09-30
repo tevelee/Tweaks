@@ -21,11 +21,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
 
         let name = TweakDefinition(id: "t1", name: "Name", initialValue: "default name")
-        let enabled = TweakDefinition(id: "t2", name: "Is Enabled", initialValue: false, valueRenderer: SegmentedBoolRenderer(), store: UserDefaultsStore(converter: .description))
+        let enabled = TweakDefinition(id: "t2", name: "Is Enabled", initialValue: false, renderer: SegmentedBoolRenderer(), store: UserDefaultsStore(converter: .description))
         let flag = TweakDefinition(name: "Flag", initialValue: true)
         let numberOfItems = TweakDefinition(id: "t3", name: "Number of items", initialValue: 1)
-        let chartOffset = TweakDefinition(id: "t4", name: "Chart offset", initialValue: nil, valueRenderer: OptionalToggleRenderer(renderer: SliderRenderer(range: 0 ... 10), defaultValueForNewElement: 1), store: InMemoryStore())
+        let chartOffset = TweakDefinition(id: "t4", name: "Chart offset", initialValue: nil, renderer: OptionalToggleRenderer(renderer: SliderRenderer(range: 0 ... 10), defaultValueForNewElement: 1), store: InMemoryStore())
         let chartValues = TweakDefinition(id: "t5", name: "Chart values", initialValue: [1,2,3])
+        let count = TweakDefinition(id: "t6", name: "Count", initialValue: 1, renderer: CustomRenderer(previewView: { Text(String($0)) }, tweakView: { Stepper("", value: $0) }), store: InMemoryStore())
         let resetAction = TweakAction(name: "Reset onboarding") {
             print("reset")
         }
@@ -40,6 +41,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         tweakRepo.add(tweak: name, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: enabled, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: flag, category: "Product Settings", section: "Feature Settings")
+        tweakRepo.add(tweak: count, category: "Product Settings", section: "Feature Settings")
         tweakRepo.add(tweak: resetAction, category: "Product Settings", section: "Actions")
         tweakRepo.add(tweak: restartAction, category: "Product Settings", section: "Actions")
         if #available(iOS 14.0, *) {

@@ -36,7 +36,7 @@ struct ContentView: View {
             Spacer()
             Text("Hello!")
             Spacer()
-            Button(action: { self.showTweaks = true }) {
+            Button(action: { showTweaks = true }) {
                 Text("Open Tweaks")
             }
             Spacer()
@@ -65,9 +65,9 @@ TweakRepository.shared.add(tweak: tweak, category: "Product Settings", section: 
 You can also specify how your data should be represented in SwiftUI with renderer objects:
 
 ```swift
-let tweak = TweakDefinition(name: "Number of items", initialValue: 1, valueRenderer: InputAndStepperRenderer())
-let tweak = TweakDefinition(name: "Number of items", initialValue: 1, valueRenderer: SliderRenderer())
-let tweak = TweakDefinition(name: "Number of items", initialValue: 1, valueRenderer: CustomRenderer(previewView: { Text(String($0)) }, tweakView: { Stepper("", value: $0) }))
+let tweak = TweakDefinition(name: "Number of items", initialValue: 1, renderer: InputAndStepperRenderer())
+let tweak = TweakDefinition(name: "Number of items", initialValue: 1, renderer: SliderRenderer())
+let tweak = TweakDefinition(name: "Number of items", initialValue: 1, renderer: CustomRenderer(previewView: { Text(String($0)) }, tweakView: { Stepper("", value: $0) }))
 ```
 
 Of course, TweakRepository is an `ObservableObject` so you can use it easily in SwiftUI as well. See the example app for more details.
@@ -101,10 +101,12 @@ There are a few ones provided for common use-cases:
 * `ToggleBoolRenderer` and `SegmentedBoolRenderer` for Bools
 * `InputAndStepperRenderer` and `SliderRenderer` for numbers
 * `StringTextfieldRenderer` for String
+* `ColorPickerRenderer` for SwiftUI Colors
 * `PickerRenderer` and `PickerRendererWithCustomValue` are generic composite renderers if you have a predefined set of values (of any type) to choose from
 * `OptionPickerRenderer` for enums
 * `ArrayRenderer` for generic array of types
 * `OptionalToggleRenderer` for optional values of generic types
+* `CustomRenderer` for dynamic values
 
 ### Custom types
 

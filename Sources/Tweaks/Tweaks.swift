@@ -40,18 +40,18 @@ public struct TweakDefinition<Renderer: ViewRenderer, Store: StorageMechanism>: 
     public let name: String
     
     public let initialValue: Renderer.Value
-    public let valueRenderer: Renderer
+    public let renderer: Renderer
     public let store: Store
     
     public init(id: String,
                 name: String,
                 initialValue: Renderer.Value,
-                valueRenderer: Renderer,
+                renderer: Renderer,
                 store: Store) {
         self.id = id
         self.name = name
         self.initialValue = initialValue
-        self.valueRenderer = valueRenderer
+        self.renderer = renderer
         self.store = store
     }
     

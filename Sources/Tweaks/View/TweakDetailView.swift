@@ -47,7 +47,7 @@ struct TweakDetailView<Renderer: ViewRenderer, Store: StorageMechanism>: View wh
 
 struct TweakDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        let tweak = TweakDefinition(id: "preview", name: "Test", initialValue: 2, valueRenderer: InputAndStepperRenderer(), store: InMemoryStore())
+        let tweak = TweakDefinition(id: "preview", name: "Test", initialValue: 2, renderer: InputAndStepperRenderer(), store: InMemoryStore())
         return TweakDetailView(tweakDefinition: tweak)
     }
 }

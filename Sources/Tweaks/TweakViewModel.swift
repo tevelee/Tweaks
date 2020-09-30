@@ -23,11 +23,11 @@ public struct TweakViewModel<Renderer: ViewRenderer, Store: StorageMechanism>: T
     }
 
     private func previewView(value: Renderer.Value) -> Renderer.PreviewView {
-        tweakDefinition.valueRenderer.previewView(value: value)
+        tweakDefinition.renderer.previewView(value: value)
     }
 
     public func tweakView() -> Renderer.TweakView {
-        tweakDefinition.valueRenderer.tweakView(value: Binding(get: {
+        tweakDefinition.renderer.tweakView(value: Binding(get: {
             value()
         }, set: { value in
             tweakRepository[tweakDefinition] = value

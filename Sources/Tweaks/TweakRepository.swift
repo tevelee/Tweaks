@@ -10,6 +10,10 @@ public extension TweakRepositoryProtocol {
     func add(tweak: Tweak, category: String, section: String) {
         add(TweakHierarchy(tweak: tweak, category: category, section: section))
     }
+    
+    func add(tweak: TweakAction, category: String, section: String) {
+        add(TweakHierarchy(tweak: tweak, category: category, section: section))
+    }
 }
 
 public struct TweakHierarchy {

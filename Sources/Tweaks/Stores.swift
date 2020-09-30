@@ -24,11 +24,11 @@ public class InMemoryStore<Key: Hashable, Value>: StorageMechanism {
 public class UserDefaultsStore<Key: Hashable & CustomStringConvertible, Value>: StorageMechanism {
     private let userDefaults: UserDefaults
     private let namespace: String
-    private let converter: SymmetricConvering<Value, String>
+    private let converter: SymmetricConverting<Value, String>
 
     public init(userDefaults: UserDefaults = .standard,
                 namespace: String = "default",
-                converter: SymmetricConvering<Value, String>) {
+                converter: SymmetricConverting<Value, String>) {
         self.userDefaults = userDefaults
         self.namespace = namespace
         self.converter = converter

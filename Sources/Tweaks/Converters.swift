@@ -48,7 +48,7 @@ public extension Converting where RawValue == ConvertedValue {
     }
 }
 
-public struct SymmetricConvering<DecodedValue, EncodedValue> {
+public struct SymmetricConverting<DecodedValue, EncodedValue> {
     public let encoding: Converting<DecodedValue, EncodedValue>
     public let decoding: Converting<EncodedValue, DecodedValue>
     
@@ -65,9 +65,9 @@ public struct SymmetricConvering<DecodedValue, EncodedValue> {
     }
 }
 
-public extension SymmetricConvering where DecodedValue == EncodedValue {
-    static var identity: SymmetricConvering<DecodedValue, DecodedValue> {
-        SymmetricConvering(encoding: .identity, decoding: .identity)
+public extension SymmetricConverting where DecodedValue == EncodedValue {
+    static var identity: SymmetricConverting<DecodedValue, DecodedValue> {
+        SymmetricConverting(encoding: .identity, decoding: .identity)
     }
 }
 
@@ -107,9 +107,9 @@ public extension Converting where RawValue: BinaryInteger, ConvertedValue == Str
     }
 }
 
-public extension SymmetricConvering where DecodedValue: LosslessStringConvertible, EncodedValue == String {
-    static var description: SymmetricConvering<DecodedValue, String> {
-        SymmetricConvering(encoding: { $0.description },
+public extension SymmetricConverting where DecodedValue: LosslessStringConvertible, EncodedValue == String {
+    static var description: SymmetricConverting<DecodedValue, String> {
+        SymmetricConverting(encoding: { $0.description },
                            decoding: {
                             guard let value = DecodedValue.init($0) else { throw ConversionError.couldNotConvert }
                             return value
@@ -117,9 +117,9 @@ public extension SymmetricConvering where DecodedValue: LosslessStringConvertibl
     }
 }
 
-public extension SymmetricConvering where DecodedValue: RawRepresentable, EncodedValue == DecodedValue.RawValue {
-    static var description: SymmetricConvering<DecodedValue, DecodedValue.RawValue> {
-        SymmetricConvering(encoding: { $0.rawValue },
+public extension SymmetricConverting where DecodedValue: RawRepresentable, EncodedValue == DecodedValue.RawValue {
+    static var rawValue: SymmetricConverting<DecodedValue, DecodedValue.RawValue> {
+        SymmetricConverting(encoding: { $0.rawValue },
                            decoding: {
                             guard let value = DecodedValue(rawValue: $0) else { throw ConversionError.couldNotConvert }
                             return value
@@ -127,9 +127,9 @@ public extension SymmetricConvering where DecodedValue: RawRepresentable, Encode
     }
 }
 
-public extension SymmetricConvering where DecodedValue: Collection, EncodedValue == String {
-    static func array(converter: SymmetricConvering<DecodedValue.Element, String>) -> SymmetricConvering<[DecodedValue.Element], String> {
-        SymmetricConvering<[DecodedValue.Element], String>(encoding: {
+public extension SymmetricConverting where DecodedValue: Collection, EncodedValue == String {
+    static func array(converter: SymmetricConverting<DecodedValue.Element, String>) -> SymmetricConverting<[DecodedValue.Element], String> {
+        SymmetricConverting<[DecodedValue.Element], String>(encoding: {
             $0.compactMap { try? converter.encoding.convert($0) }.joined(separator: ",")
         }, decoding: {
             $0.split(separator: ",").map(String.init).compactMap { try? converter.decoding.convert($0) }
@@ -137,17 +137,17 @@ public extension SymmetricConvering where DecodedValue: Collection, EncodedValue
     }
 }
 
-public extension SymmetricConvering where EncodedValue == String {
-    static func optional<Wrapped>(converter: SymmetricConvering<Wrapped, String>) -> SymmetricConvering<Wrapped?, String> {
-        SymmetricConvering<Wrapped?, String>(encoding: {
+public extension SymmetricConverting where EncodedValue == String {
+    static func optional<Wrapped>(converter: SymmetricConverting<Wrapped, String>) -> SymmetricConverting<Wrapped?, String> {
+        SymmetricConverting<Wrapped?, String>(encoding: {
             $0.flatMap { try? converter.encoding.convert($0) } ?? "nil"
         }, decoding: {
             try? converter.decoding.convert($0)
         })
     }
     
-    static func array<Element>(converter: SymmetricConvering<Element, String>) -> SymmetricConvering<[Element], String> {
-        SymmetricConvering<[Element], String>(encoding: {
+    static func array<Element>(converter: SymmetricConverting<Element, String>) -> SymmetricConverting<[Element], String> {
+        SymmetricConverting<[Element], String>(encoding: {
             try $0.map(converter.encoding.convert).joined(separator: ",")
         }, decoding: {
             try $0.split(separator: ",").map(String.init).map(converter.decoding.convert)
@@ -201,6 +201,6 @@ extension Converting where RawValue == String, ConvertedValue == Color {
     }
 }
 
-extension SymmetricConvering where DecodedValue == Color, EncodedValue == String {
-    public static var hex = SymmetricConvering(encoding: .hex, decoding: .hex)
+extension SymmetricConverting where DecodedValue == Color, EncodedValue == String {
+    public static var hex = SymmetricConverting(encoding: .hex, decoding: .hex)
 }
