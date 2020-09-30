@@ -146,9 +146,9 @@ public struct TweakViewModel<Renderer: ViewRenderer, Store: StorageMechanism>: T
 
     public func tweakView() -> Renderer.TweakView {
         tweakDefinition.valueRenderer.tweakView(value: Binding(get: {
-            self.value()
+            value()
         }, set: { value in
-            self.tweakRepository[self.tweakDefinition] = value
+            tweakRepository[tweakDefinition] = value
         }))
     }
 

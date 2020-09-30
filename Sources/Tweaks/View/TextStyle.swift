@@ -27,7 +27,7 @@ public struct StyledText: View {
     }
     
     public var body: some View {
-        let allStyles = [TextStyle(range: text.fullRange) { $0.font(self.font) }] + styles
+        let allStyles = [TextStyle(range: text.fullRange) { $0.font(font) }] + styles
         return text.enumerated().reduce(Text(verbatim: "")) { result, character in
             result + allStyles
                 .filter { $0.range.contains(text.index(at: character.offset)) }

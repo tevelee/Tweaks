@@ -15,7 +15,7 @@ struct ContentView: View {
     var body: some View {
         VStack {
             Text("Hello!")
-            Button(action: { self.showTweaks = true }) {
+            Button(action: { showTweaks = true }) {
                 Text("Open Tweaks")
             }
         }

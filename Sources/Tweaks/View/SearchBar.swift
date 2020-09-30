@@ -23,8 +23,8 @@ struct SearchBar: View {
                             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                             .padding(.leading, 8)
                         
-                        if self.text != "" {
-                            Button(action: { self.text = "" }) {
+                        if text != "" {
+                            Button(action: { text = "" }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.gray)
                                     .padding(.trailing, 8)
@@ -34,7 +34,7 @@ struct SearchBar: View {
                 )
             if keyboard.isVisible {
                 Button(action: {
-                    self.text = ""
+                    text = ""
                     UIApplication.shared.endEditing()
                 }) {
                     Text("Cancel")
@@ -56,7 +56,7 @@ struct SearchBar_Previews: PreviewProvider {
 
 extension UIApplication {
     func endEditing(force: Bool = true) {
-        self.windows
+        windows
             .filter{$0.isKeyWindow}
             .first?
             .endEditing(force)

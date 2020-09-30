@@ -50,10 +50,10 @@ struct TweakCategoriesList: View {
             }
             .navigationBarTitle("Tweaks")
             .navigationBarItems(trailing: Button(action: {
-                self.tweakRepository.resetAll()
+                tweakRepository.resetAll()
             }) {
                 Text("Reset all overrides")
-            }.disabled(!self.tweakRepository.hasOverride()))
+            }.disabled(!tweakRepository.hasOverride()))
             .resignKeyboardOnDragGesture()
         }
     }
@@ -84,10 +84,10 @@ struct TweakCategoryDetail: View {
         }
         .navigationBarTitle(category.name)
         .navigationBarItems(trailing: Button(action: {
-            self.tweakRepository.resetAll(in: self.category)
+            tweakRepository.resetAll(in: category)
         }) {
             Text("Reset all overrides")
-        }.disabled(!self.tweakRepository.hasOverride(in: self.category)))
+        }.disabled(!tweakRepository.hasOverride(in: category)))
     }
 }
 
@@ -140,18 +140,18 @@ struct TweakRow<Renderer: ViewRenderer, Store: StorageMechanism>: View where Ren
                 let highlightRanges = tweak.name.ranges(for: searchQuery)
                 if highlightRanges.isEmpty {
                     Text(tweak.name)
-                        .foregroundColor(viewModel.isOverride() ? self.highlightColor : Color(.label))
+                        .foregroundColor(viewModel.isOverride() ? highlightColor : Color(.label))
                 } else {
                     StyledText(tweak.name)
-                        .foregroundColor(viewModel.isOverride() ? self.highlightColor.opacity(0.7) : Color(.secondaryLabel))
+                        .foregroundColor(viewModel.isOverride() ? highlightColor.opacity(0.7) : Color(.secondaryLabel))
                         .style(ranges: highlightRanges) {
-                            $0.fontWeight(.semibold).foregroundColor(viewModel.isOverride() ? self.highlightColor : Color(.label))
+                            $0.fontWeight(.semibold).foregroundColor(viewModel.isOverride() ? highlightColor : Color(.label))
                         }
                 }
                 Spacer()
                 viewModel.previewView()
                     .font(.subheadline)
-                    .foregroundColor(viewModel.isOverride() ? self.highlightColor : Color(.secondaryLabel))
+                    .foregroundColor(viewModel.isOverride() ? highlightColor : Color(.secondaryLabel))
             }
         }
     }

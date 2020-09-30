@@ -63,8 +63,8 @@ public struct InputAndStepperRenderer: ViewRenderer {
 
 extension Binding where Value: LosslessStringConvertible {
     func string(defaultValue: Value) -> Binding<String> {
-        Binding<String>(get: { self.wrappedValue.description },
-                        set: { self.wrappedValue = Value($0) ?? defaultValue })
+        Binding<String>(get: { wrappedValue.description },
+                        set: { wrappedValue = Value($0) ?? defaultValue })
     }
 }
 
@@ -104,7 +104,7 @@ public struct PickerRendererWithCustomValue<Renderer: ViewRenderer>: ViewRendere
         self.init(options: Dictionary(grouping: options) { converter.convert($0, fallback: "") }.compactMapValues(\.first), renderer: renderer)
     }
     public func previewView(value: Renderer.Value) -> some View {
-        self.renderer.previewView(value: value)
+        renderer.previewView(value: value)
     }
 
     let sort = { (one: (key: String, Renderer.Value), two: (key: String, Renderer.Value)) -> Bool in
@@ -139,7 +139,7 @@ public struct PickerRenderer<Renderer: ViewRenderer>: ViewRenderer where Rendere
         self.init(options: Dictionary(grouping: options) { converter.convert($0, fallback: "") }.compactMapValues(\.first), renderer: renderer, sort: sort)
     }
     public func previewView(value: Renderer.Value) -> some View {
-        self.renderer.previewView(value: value)
+        renderer.previewView(value: value)
     }
     public func tweakView(value: Binding<Renderer.Value>) -> some View {
         VStack {
@@ -150,12 +150,12 @@ public struct PickerRenderer<Renderer: ViewRenderer>: ViewRenderer where Rendere
                             .font(.body)
                             .foregroundColor(Color(.label))
                         Spacer()
-                        self.renderer.previewView(value: self.options[key]!)
+                        renderer.previewView(value: options[key]!)
                             .font(.subheadline)
                             .foregroundColor(Color(.secondaryLabel))
                     }
-                    .tag(self.options[key]!)
-                    .disabled(self.options.values.contains(value.wrappedValue))
+                    .tag(options[key]!)
+                    .disabled(options.values.contains(value.wrappedValue))
                 }
             }
             .pickerStyle(WheelPickerStyle())
@@ -182,7 +182,7 @@ public struct OptionPickerRenderer<Value>: ViewRenderer {
             ForEach(values, id: \.string) { item, itemString in
                 Button(action: { value.wrappedValue = item }) {
                     HStack {
-                        self.previewView(value: item)
+                        previewView(value: item)
                             .foregroundColor(Color(.label))
                         Spacer()
                         if selectedItemString == itemString {
@@ -220,7 +220,7 @@ public struct ArrayRenderer<Renderer: ViewRenderer>: ViewRenderer {
         VStack {
             ForEach(0 ..< value.wrappedValue.count, id: \.self) { index in
                 HStack {
-                    self.renderer.tweakView(value: value[index])
+                    renderer.tweakView(value: value[index])
                     Image(systemName: "minus.circle")
                         .foregroundColor(Color(.systemRed))
                         .onTapGesture {
@@ -228,7 +228,7 @@ public struct ArrayRenderer<Renderer: ViewRenderer>: ViewRenderer {
                         }
                 }
             }
-            Button(action: { value.wrappedValue += [self.defaultValueForNewElement] }) {
+            Button(action: { value.wrappedValue += [defaultValueForNewElement] }) {
                 HStack {
                     Image(systemName: "plus").foregroundColor(Color(.systemBlue))
                     Text("Add")
@@ -271,18 +271,18 @@ struct OptionalTweakView<Renderer: ViewRenderer>: View where Renderer.Value: Twe
     var body: some View {
         VStack {
             Toggle(isOn: Binding<Bool>(get: {
-                self.value.wrappedValue != nil
+                value.wrappedValue != nil
             }, set: {
                 if $0 {
-                    self.value.wrappedValue = self.lastSetValue ?? self.defaultValueForNewElement
+                    value.wrappedValue = lastSetValue ?? defaultValueForNewElement
                 } else {
-                    self.value.wrappedValue = nil
+                    value.wrappedValue = nil
                 }
             })) { Text("Has value?") }
             if value.wrappedValue != nil {
-                renderer.tweakView(value: Binding<Renderer.Value>(get: { self.value.wrappedValue! }, set: {
-                    self.value.wrappedValue = $0
-                    self.lastSetValue = $0
+                renderer.tweakView(value: Binding<Renderer.Value>(get: { value.wrappedValue! }, set: {
+                    value.wrappedValue = $0
+                    lastSetValue = $0
                 }))
                 .animation(.default)
                 .transition(.opacity)

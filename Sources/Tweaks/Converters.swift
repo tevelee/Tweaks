@@ -10,13 +10,13 @@ public protocol Converter {
 public struct Converting<RawValue, ConvertedValue> {
     public let _convert: (RawValue) throws -> ConvertedValue
     public init(convert: @escaping (RawValue) throws -> ConvertedValue) {
-        self._convert = convert
+        _convert = convert
     }
     public func convert(_ value: RawValue) throws -> ConvertedValue {
-        try self._convert(value)
+        try _convert(value)
     }
     public func convert(_ value: RawValue, fallback: ConvertedValue) -> ConvertedValue {
-        if let value = try? self._convert(value) {
+        if let value = try? _convert(value) {
             return value
         } else {
             return fallback
@@ -25,18 +25,18 @@ public struct Converting<RawValue, ConvertedValue> {
     public func pullback<OtherValue>(_ transform: @escaping (OtherValue) -> RawValue) -> Converting<OtherValue, ConvertedValue> {
         Converting<OtherValue, ConvertedValue> { otherValue in
             let rawValue = transform(otherValue)
-            return try self.convert(rawValue)
+            return try convert(rawValue)
         }
     }
     public func chain<OtherValue>(_ other: Converting<ConvertedValue, OtherValue>) -> Converting<RawValue, OtherValue> {
         Converting<RawValue, OtherValue> { rawValue in
-            let converted = try self.convert(rawValue)
+            let converted = try convert(rawValue)
             return try other.convert(converted)
         }
     }
     public func map<OtherValue>(_ block: @escaping (ConvertedValue) -> OtherValue) -> Converting<RawValue, OtherValue> {
         Converting<RawValue, OtherValue> { rawValue in
-            let converted = try self.convert(rawValue)
+            let converted = try convert(rawValue)
             return block(converted)
         }
     }
