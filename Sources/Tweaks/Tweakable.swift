@@ -10,13 +10,3 @@ extension Bool: Tweakable {}
 extension Color: Tweakable {}
 extension Optional: Tweakable where Wrapped: Tweakable {}
 extension Array: Tweakable where Element: Tweakable {}
-
-public struct SectionModel<Element> {
-    public var name: String
-    public var elements: [Element]
-
-    public init(name: String, elements: [Element]) {
-        self.name = name
-        self.elements = elements
-    }
-}

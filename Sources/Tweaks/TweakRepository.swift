@@ -26,6 +26,16 @@ public struct TweakHierarchy {
     }
 }
 
+public struct SectionModel<Element> {
+    public var name: String
+    public var elements: [Element]
+
+    public init(name: String, elements: [Element]) {
+        self.name = name
+        self.elements = elements
+    }
+}
+
 public class TweakRepository: ObservableObject, TweakRepositoryProtocol {
     public static let shared = TweakRepository()
     
@@ -64,7 +74,7 @@ public class TweakRepository: ObservableObject, TweakRepositoryProtocol {
     }
 }
 
-extension Array {
+fileprivate extension Array {
     func firstWithIndex(where block: @escaping (Element) -> Bool) -> (offset: Int, element: Element)? {
         for item in enumerated() where block(item.element) {
             return item
